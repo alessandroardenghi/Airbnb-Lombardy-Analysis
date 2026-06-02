@@ -3,6 +3,7 @@ from typing import Optional, Tuple
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
+import numpy as np
 
 
 def plot_kde_by_city(
@@ -148,40 +149,33 @@ def plot_categorical_barchart(
     if df.empty:
         raise ValueError("The provided DataFrame contains no data.")
 
-    # Calculate exact order of categories by descending frequency
     value_counts = df[category_col].value_counts()
     category_order = value_counts.index
 
-    # Initialize plotting environment
     sns.set_theme(style="whitegrid")
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    # Generate the bar chart
     sns.countplot(
         data=df,
         x=category_col,
         order=category_order,
         palette="viridis",
-        hue=category_col,  # Assigned to hue to suppress Seaborn future warnings with palettes
+        hue=category_col,
         legend=False,
         ax=ax,
     )
 
-    # Automatically annotate bars with their exact count values
     for container in ax.containers:
         ax.bar_label(container, padding=3, fmt="%d", fontsize=10)
 
-    # Apply formatting
     plot_title = title if title else f"Frequency Distribution of {category_col}"
     ax.set_title(plot_title, fontsize=14, fontweight="bold", pad=15)
     ax.set_xlabel(category_col.replace("_", " ").title(), fontsize=12, labelpad=10)
     ax.set_ylabel("Count", fontsize=12, labelpad=10)
 
-    # Rotate x-axis labels if there are many categories or long strings
     if len(category_order) > 4 or any(len(str(cat)) > 10 for cat in category_order):
         plt.xticks(rotation=45, ha="right")
 
-    # Expand the y-axis limit slightly to accommodate the bar annotations
     current_ymax = ax.get_ylim()[1]
     ax.set_ylim(0, current_ymax * 1.1)
 
@@ -190,19 +184,12 @@ def plot_categorical_barchart(
     return
 
 
-import numpy as np
-
-
 def plot_log_distribution_by_city(df, variable_col, city_col="city"):
-    # 1. Create a temporary copy to avoid modifying your original dataframe
     plot_df = df[[variable_col, city_col]].copy()
 
-    # 2. Apply the safe log transformation (log(x + 1))
     log_col_name = f"log_{variable_col}"
     plot_df[log_col_name] = np.log1p(plot_df[variable_col])
 
-    # 3. Set up the Seaborn FacetGrid to split by city
-    # sharey=False allows each city to scale to its own listing volume
     g = sns.FacetGrid(
         plot_df,
         col=city_col,
@@ -212,16 +199,10 @@ def plot_log_distribution_by_city(df, variable_col, city_col="city"):
         height=4,
         aspect=1.3,
     )
-
-    # 4. Map the histogram and Kernel Density Estimate (KDE) line
     g.map_dataframe(
         sns.histplot, x=log_col_name, kde=True, bins=30, alpha=0.6, stat="density"
     )
-
-    # 5. Clean up titles and labels
     g.set_titles(col_template="{col_name} Market")
     g.set_axis_labels(f"Log({variable_col} + 1)", "Density")
-
-    # Adjust layout and show
     plt.tight_layout()
     plt.show()

@@ -188,3 +188,40 @@ def plot_categorical_barchart(
     plt.tight_layout()
 
     return
+
+
+import numpy as np
+
+
+def plot_log_distribution_by_city(df, variable_col, city_col="city"):
+    # 1. Create a temporary copy to avoid modifying your original dataframe
+    plot_df = df[[variable_col, city_col]].copy()
+
+    # 2. Apply the safe log transformation (log(x + 1))
+    log_col_name = f"log_{variable_col}"
+    plot_df[log_col_name] = np.log1p(plot_df[variable_col])
+
+    # 3. Set up the Seaborn FacetGrid to split by city
+    # sharey=False allows each city to scale to its own listing volume
+    g = sns.FacetGrid(
+        plot_df,
+        col=city_col,
+        hue=city_col,
+        palette="Set2",
+        sharey=False,
+        height=4,
+        aspect=1.3,
+    )
+
+    # 4. Map the histogram and Kernel Density Estimate (KDE) line
+    g.map_dataframe(
+        sns.histplot, x=log_col_name, kde=True, bins=30, alpha=0.6, stat="density"
+    )
+
+    # 5. Clean up titles and labels
+    g.set_titles(col_template="{col_name} Market")
+    g.set_axis_labels(f"Log({variable_col} + 1)", "Density")
+
+    # Adjust layout and show
+    plt.tight_layout()
+    plt.show()

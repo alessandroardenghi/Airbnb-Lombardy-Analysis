@@ -2,17 +2,17 @@ import pandas as pd
 from typing import Optional, Tuple
 import matplotlib.pyplot as plt
 import seaborn as sns
-import os
 import numpy as np
 
 
-def plot_kde_by_city(
+def plot_kde(
     df: pd.DataFrame,
     target_column: str = "availability_90",
     city_column: str = "city",
     rng: Tuple[int, int] = (0, 90),
 ):
 
+    # VALIDATION ON COLUMNS
     if target_column not in df.columns:
         raise KeyError(
             f"Target column '{target_column}' is missing from the DataFrame."
@@ -22,17 +22,13 @@ def plot_kde_by_city(
         raise KeyError(f"City column '{city_column}' is missing from the DataFrame.")
 
     # ISOLATE TARGET VARIABLES FOR MI AND BG
-    milan_series: pd.Series = df[df[city_column] == "MI"][target_column].dropna()
-    bergamo_series: pd.Series = df[df[city_column] == "BG"][target_column].dropna()
+    milan_series = df[df[city_column] == "MI"][target_column].dropna()
+    bergamo_series = df[df[city_column] == "BG"][target_column].dropna()
 
     if milan_series.empty:
-        raise ValueError(
-            "The Milan (MI) market subset contains no valid data for plotting."
-        )
+        raise ValueError("The Milan Listings contain no valid data for plotting")
     if bergamo_series.empty:
-        raise ValueError(
-            "The Bergamo (BG) market subset contains no valid data for plotting."
-        )
+        raise ValueError("The Bergamo Listings contain no valid data for plotting")
 
     # INITIALIZE SEABORN
     sns.set_theme(style="whitegrid")
@@ -43,10 +39,11 @@ def plot_kde_by_city(
         data=milan_series,
         ax=axes[0],
         fill=True,
-        color="#1f77b4",
+        color="blue",
         linewidth=1.0,
     )
-    axes[0].set_title("Market Segment: Milan (MI)", fontsize=12, fontweight="bold")
+
+    axes[0].set_title("City: Milan (MI)", fontsize=12, fontweight="bold")
     axes[0].set_xlabel(target_column)
     axes[0].set_ylabel("Density")
 
@@ -55,10 +52,10 @@ def plot_kde_by_city(
         data=bergamo_series,
         ax=axes[1],
         fill=True,
-        color="#ff7f0e",
+        color="orange",
         linewidth=1.0,
     )
-    axes[1].set_title("Market Segment: Bergamo (BG)", fontsize=12, fontweight="bold")
+    axes[1].set_title("City: Bergamo (BG)", fontsize=12, fontweight="bold")
     axes[1].set_xlabel(target_column)
     axes[1].set_ylabel("Density")
 
@@ -67,7 +64,7 @@ def plot_kde_by_city(
         ax.set_xlim(rng[0], rng[1])
 
     fig.suptitle(
-        f"Cross-Market Kernel Density Estimation (KDE) Comparison: {target_column}",
+        f"Cross-City Kernel Density Estimation Comparison: {target_column}",
         fontsize=14,
         fontweight="bold",
         y=1.02,
@@ -76,79 +73,16 @@ def plot_kde_by_city(
     return
 
 
-def generate_violin_plot_by_city(
-    df: pd.DataFrame,
-    target_column: str = "availability_90",
-    city_column: str = "city",
-    rng: Tuple[int, int] = (0, 90),
-):
+def plot_barchart(df: pd.DataFrame, category_col: str) -> None:
 
-    if target_column not in df.columns:
-        raise KeyError(
-            f"Target column '{target_column}' is missing from the DataFrame schema."
-        )
-    if city_column not in df.columns:
-        raise KeyError(
-            f"City identifier column '{city_column}' is missing from the DataFrame schema."
-        )
-
-    # Filter strictly for the two target markets to ensure clean comparison
-    df = df[df[city_column].isin(["MI", "BG"])].dropna(subset=[target_column])
-
-    if df.empty:
-        raise ValueError(
-            "The filtered dataset contains zero valid observations for the specified cities."
-        )
-
-    # INITIALIZE SEABORN
-    sns.set_theme(style="whitegrid")
-    fig, ax = plt.subplots(figsize=(9, 6))
-
-    market_palette = {"MI": "#1f77b4", "BG": "#ff7f0e"}
-
-    # GENERATE VIOLIN PLOT
-    sns.violinplot(
-        data=df,
-        x=city_column,
-        y=target_column,
-        ax=ax,
-        palette=market_palette,
-        hue=city_column,
-        inner="box",
-        linewidth=1.5,
-        cut=0,
-        legend=False,
-    )
-
-    # BOUNDARIES SET WITH MIN AND MAX OCCUPANCY PER YEAR
-    ax.set_ylim(rng[0], rng[1])
-
-    ax.set_title(
-        f"Cross-Market Capacity Distribution Analysis: {target_column}",
-        fontsize=14,
-        fontweight="bold",
-        pad=15,
-    )
-    ax.set_xlabel("Market Segment", fontsize=12, labelpad=10)
-    ax.set_ylabel("Nights Booked (Next 90 Days)", fontsize=12, labelpad=10)
-
-    plt.tight_layout()
-
-    return
-
-
-def plot_categorical_barchart(
-    df: pd.DataFrame,
-    category_col: str,
-    title: Optional[str] = None,
-) -> None:
-
+    # VALIDATION ON COLUMN
     if category_col not in df.columns:
         raise KeyError(f"Column '{category_col}' not found in the DataFrame.")
 
     if df.empty:
         raise ValueError("The provided DataFrame contains no data.")
 
+    # COMPUTING THE FREQUENCY OF EACH CATEGORY
     value_counts = df[category_col].value_counts()
     category_order = value_counts.index
 
@@ -168,7 +102,7 @@ def plot_categorical_barchart(
     for container in ax.containers:
         ax.bar_label(container, padding=3, fmt="%d", fontsize=10)
 
-    plot_title = title if title else f"Frequency Distribution of {category_col}"
+    plot_title = f"Frequency Distribution of {category_col}"
     ax.set_title(plot_title, fontsize=14, fontweight="bold", pad=15)
     ax.set_xlabel(category_col.replace("_", " ").title(), fontsize=12, labelpad=10)
     ax.set_ylabel("Count", fontsize=12, labelpad=10)
@@ -184,9 +118,13 @@ def plot_categorical_barchart(
     return
 
 
-def plot_log_distribution_by_city(df, variable_col, city_col="city"):
+def plot_log_transformed_distr(
+    df: pd.DataFrame, variable_col: str, city_col: str = "city"
+):
+
     plot_df = df[[variable_col, city_col]].copy()
 
+    # APPLYING LOG(1 + X) TRANSFORMATION TO THE TARGET VARIABLE
     log_col_name = f"log_{variable_col}"
     plot_df[log_col_name] = np.log1p(plot_df[variable_col])
 
@@ -194,7 +132,7 @@ def plot_log_distribution_by_city(df, variable_col, city_col="city"):
         plot_df,
         col=city_col,
         hue=city_col,
-        palette="Set2",
+        palette="viridis",
         sharey=False,
         height=4,
         aspect=1.3,

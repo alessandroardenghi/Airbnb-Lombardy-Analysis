@@ -1,7 +1,7 @@
 [project]
 name = "milanshorttermrentalanalysis"
 version = "0.1.0"
-description = "Add your description here"
+description = "Short term analysis of Listings in Milan/Bergamo"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
